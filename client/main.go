@@ -1,5 +1,10 @@
 package main
 
+import (
+	"bluelabel/shared"
+	"fmt"
+)
+
 func main() {
-	println("Hello Client")
+	fmt.Printf("%s Client\n", shared.Greet())
 }
