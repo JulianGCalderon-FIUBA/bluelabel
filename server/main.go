@@ -1,10 +1,28 @@
 package main
 
 import (
-	"bluelabel/shared"
-	"fmt"
+	"io"
+	"log"
+	"net"
 )
 
+const listenAddr = "localhost:4000"
+
 func main() {
-	fmt.Printf("%s Server\n", shared.Greet())
+	listener, err := net.Listen("tcp", listenAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	matcher := newMatcher()
+
+	for {
+		c, err := listener.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		io.WriteString(c, "Esperando usuario...\n")
+		go matcher.match(c, play_game)
+	}
 }
