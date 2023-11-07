@@ -14,10 +14,10 @@ func newMatcher() matcher {
 	}
 }
 
-func (m *matcher) match(c net.Conn, g game) {
+func (m *matcher) match(connection net.Conn, game game) {
 	select {
 	case other := <-m.waiting:
-		g(other, c)
-	case m.waiting <- c:
+		game(other, connection)
+	case m.waiting <- connection:
 	}
 }
