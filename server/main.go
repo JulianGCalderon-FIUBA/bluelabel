@@ -15,7 +15,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	matcher := matcher.NewMatcher(matcher.MatchStarterFunc(play_game))
+	matcher := matcher.NewMatcher(2, matcher.MatchStarterFunc(play_game))
 
 	for {
 		c, err := listener.Accept()

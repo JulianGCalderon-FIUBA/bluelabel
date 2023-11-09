@@ -5,13 +5,15 @@ import (
 )
 
 type Matcher struct {
-	waiting chan net.Conn
-	starter MatchStarter
+	waiting   chan net.Conn
+	lobbySize int
+	starter   MatchStarter
 }
 
-func NewMatcher(starter MatchStarter) Matcher {
+func NewMatcher(lobbySize int, starter MatchStarter) Matcher {
 	return Matcher{
 		make(chan net.Conn),
+		lobbySize,
 		starter,
 	}
 }
