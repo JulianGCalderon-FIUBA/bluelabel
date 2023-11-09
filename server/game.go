@@ -5,12 +5,14 @@ import (
 	"net"
 )
 
-type game func(p1, p2 net.Conn)
+func play_game(ps ...net.Conn) {
+	for i, c1 := range ps {
+		for j, c2 := range ps {
+			if i == j {
+				continue
+			}
 
-func play_game(p1, p2 net.Conn) {
-	io.WriteString(p1, "Usuario encontrado\n")
-	io.WriteString(p2, "Usuario encontrado\n")
-
-	go io.Copy(p1, p2)
-	io.Copy(p2, p1)
+			go io.Copy(c1, c2)
+		}
+	}
 }

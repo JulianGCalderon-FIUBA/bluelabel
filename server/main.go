@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bluelabel/server/matcher"
 	"io"
 	"log"
 	"net"
@@ -14,7 +15,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	matcher := newMatcher()
+	matcher := matcher.NewMatcher(matcher.MatchStarterFunc(play_game))
 
 	for {
 		c, err := listener.Accept()
@@ -23,6 +24,6 @@ func main() {
 		}
 
 		io.WriteString(c, "Esperando usuario...\n")
-		go matcher.match(c, play_game)
+		go matcher.Match(c)
 	}
 }
