@@ -31,24 +31,24 @@ func TestLobbySizeIsCorrect(t *testing.T) {
 	for lobbySize := 2; lobbySize <= maxLobbySize; lobbySize++ {
 		pipes := createPipeArray(lobbySize * maxLobbyAmount)
 
-		wg := sync.WaitGroup{}
-		wg.Add(maxLobbyAmount)
+		lobbyWaitGroup := sync.WaitGroup{}
+		lobbyWaitGroup.Add(maxLobbyAmount)
 
 		starter := func(connections ...net.Conn) {
 			if lobbySize != len(connections) {
 				t.Errorf("Expected lobby size of %v, but got %v", lobbySize, len(connections))
 			}
 
-			wg.Done()
+			lobbyWaitGroup.Done()
 		}
 
 		matcher := matcher.NewMatcher(lobbySize, matcher.MatchStarterFunc(starter))
 
 		for _, c := range pipes {
-			go matcher.Match(c[1])
+			matcher.Match(c[1])
 		}
 
-		wg.Wait()
+		lobbyWaitGroup.Wait()
 	}
 }
 
