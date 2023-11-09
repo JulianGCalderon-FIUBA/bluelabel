@@ -11,8 +11,8 @@ import (
 
 const (
 	dummyMessage   = "dummy"
-	maxLobbySize   = 2
-	maxLobbyAmount = 5
+	maxLobbySize   = 8
+	maxLobbyAmount = 8
 )
 
 func createPipeArray(lobbySize int) [][2]net.Conn {

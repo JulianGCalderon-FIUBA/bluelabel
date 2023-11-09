@@ -11,17 +11,27 @@ type Matcher struct {
 }
 
 func NewMatcher(lobbySize int, starter MatchStarter) Matcher {
-	return Matcher{
+	m := Matcher{
 		make(chan net.Conn),
 		lobbySize,
 		starter,
 	}
+
+	go m.loop()
+
+	return m
+}
+
+func (m *Matcher) loop() {
+	for {
+		connections := make([]net.Conn, m.lobbySize)
+		for i := 0; i < m.lobbySize; i++ {
+			connections[i] = <-m.waiting
+		}
+		go m.starter.StartMatch(connections...)
+	}
 }
 
 func (m *Matcher) Match(connection net.Conn) {
-	select {
-	case other := <-m.waiting:
-		m.starter.StartMatch(connection, other)
-	case m.waiting <- connection:
-	}
+	m.waiting <- connection
 }
