@@ -23,7 +23,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		io.WriteString(c, "Esperando usuario...\n")
+		io.WriteString(c, "Looking for lobby...\n")
 		go matcher.Match(c)
 	}
 }
