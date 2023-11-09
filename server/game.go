@@ -9,12 +9,17 @@ func play_game(ps ...net.Conn) {
 	for i, c1 := range ps {
 		io.WriteString(c1, "Found lobby\n")
 
+		others := make([]io.Writer, 0, len(ps)-1)
 		for j, c2 := range ps {
 			if i == j {
 				continue
 			}
 
-			go io.Copy(c1, c2)
+			others = append(others, c2)
 		}
+
+		broadcast := io.MultiWriter(others...)
+
+		go io.Copy(broadcast, c1)
 	}
 }
