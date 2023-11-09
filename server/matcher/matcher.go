@@ -38,7 +38,7 @@ func (m *Matcher) loop() {
 
 // Tries to find a match for the given connection. When enough connections are sent, a match is started. This
 // functions is blocking until the loop goroutine retreives the value (not until a match is found). This
-// delay should be really small.
+// delay should be really small
 func (m *Matcher) Match(connection net.Conn) {
 	m.waiting <- connection
 }
