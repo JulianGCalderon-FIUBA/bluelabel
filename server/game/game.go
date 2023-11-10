@@ -5,21 +5,21 @@ import (
 )
 
 func PlayGame(clientConnections ...net.Conn) {
-	game := newGame(clientConnections...)
+	game := makeGame(clientConnections...)
 	game.playGame()
 }
 
 type game struct {
-	clients []*client
+	clients []client
 }
 
-func newGame(clientConnections ...net.Conn) *game {
-	clients := make([]*client, len(clientConnections))
+func makeGame(clientConnections ...net.Conn) game {
+	clients := make([]client, len(clientConnections))
 	for i, c := range clientConnections {
-		clients[i] = newClient(c)
+		clients[i] = makeClient(c)
 	}
 
-	return &game{
+	return game{
 		clients,
 	}
 }

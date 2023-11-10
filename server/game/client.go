@@ -10,11 +10,11 @@ type client struct {
 	decoder *gob.Decoder
 }
 
-func newClient(connection net.Conn) *client {
+func makeClient(connection net.Conn) client {
 	encoder := gob.NewEncoder(connection)
 	decoder := gob.NewDecoder(connection)
 
-	return &client{
+	return client{
 		encoder,
 		decoder,
 	}
