@@ -1,11 +1,11 @@
-package main
+package game
 
 import (
 	"io"
 	"net"
 )
 
-func play_game(ps ...net.Conn) {
+func PlayGame(ps ...net.Conn) {
 	for i, c1 := range ps {
 		io.WriteString(c1, "Found lobby\n")
 

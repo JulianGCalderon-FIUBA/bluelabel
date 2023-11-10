@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bluelabel/server/game"
 	"bluelabel/server/matcher"
 	"io"
 	"log"
@@ -15,7 +16,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	matcher := matcher.NewMatcher(3, matcher.MatchStarterFunc(play_game))
+	matcher := matcher.NewMatcher(3, matcher.MatchStarterFunc(game.PlayGame))
 
 	for {
 		c, err := listener.Accept()
