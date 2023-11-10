@@ -1,25 +1,27 @@
 package game
 
 import (
-	"io"
 	"net"
 )
 
-func PlayGame(ps ...net.Conn) {
-	for i, c1 := range ps {
-		io.WriteString(c1, "Found lobby\n")
+func PlayGame(clientConnections ...net.Conn) {
+	game := newGame(clientConnections...)
+	game.playGame()
+}
 
-		others := make([]io.Writer, 0, len(ps)-1)
-		for j, c2 := range ps {
-			if i == j {
-				continue
-			}
+type game struct {
+	clients []*client
+}
 
-			others = append(others, c2)
-		}
+func newGame(clientConnections ...net.Conn) *game {
+	clients := make([]*client, len(clientConnections))
+	for i, c := range clientConnections {
+		clients[i] = newClient(c)
+	}
 
-		broadcast := io.MultiWriter(others...)
-
-		go io.Copy(broadcast, c1)
+	return &game{
+		clients,
 	}
 }
+
+func (g *game) playGame() {}
