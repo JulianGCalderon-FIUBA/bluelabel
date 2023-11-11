@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-// Encapsulate each client connection in a game
+// Encapsulates a client connection in a game
 type client struct {
 	encoder *gob.Encoder
 	decoder *gob.Decoder
