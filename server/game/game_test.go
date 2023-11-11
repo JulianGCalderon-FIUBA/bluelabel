@@ -11,6 +11,7 @@ import (
 
 const lobbySize = 3
 
+// Creates a mock game with given size, and returns the remote connections of the client
 func mockGame(lobbySize int) ([]net.Conn, Game) {
 	remote := make([]net.Conn, lobbySize)
 	local := make([]net.Conn, lobbySize)
