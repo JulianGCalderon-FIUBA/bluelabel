@@ -4,24 +4,19 @@ import (
 	"net"
 )
 
-func PlayGame(clientConnections ...net.Conn) {
-	game := makeGame(clientConnections...)
-	game.playGame()
-}
-
-type game struct {
+type Game struct {
 	clients []client
 }
 
-func makeGame(clientConnections ...net.Conn) game {
+func MakeGame(clientConnections ...net.Conn) Game {
 	clients := make([]client, len(clientConnections))
 	for i, c := range clientConnections {
 		clients[i] = makeClient(c)
 	}
 
-	return game{
+	return Game{
 		clients,
 	}
 }
 
-func (g *game) playGame() {}
+func (g *Game) PlayGame() {}
