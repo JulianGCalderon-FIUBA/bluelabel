@@ -1,6 +1,8 @@
 package game
 
 import (
+	"bluelabel/shared"
+	"math/rand"
 	"net"
 )
 
@@ -22,16 +24,23 @@ func MakeGame(clientConnections ...net.Conn) Game {
 }
 
 // Starts the game loop. This function is blocking.
-func (g *Game) PlayGame() {}
+func (g *Game) PlayGame() {
+	round := shared.Round{Character: randomRune()}
+	g.broadcast(&round)
+}
 
-// Sends a gob-encoded structure to each client, as an interface.
+// Sends a gob-encoded structure to each client.
 func (g *Game) broadcast(structure any) error {
 	for _, client := range g.clients {
-		err := client.send(&structure)
+		err := client.send(structure)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func randomRune() rune {
+	return rune('a' + rand.Intn('c'+1-'a'))
 }
