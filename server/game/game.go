@@ -41,6 +41,7 @@ func (g *Game) broadcast(structure any) error {
 	return nil
 }
 
+// Returns a random rune, from 'a' to 'z'
 func randomRune() rune {
 	return rune('a' + rand.Intn('c'+1-'a'))
 }
