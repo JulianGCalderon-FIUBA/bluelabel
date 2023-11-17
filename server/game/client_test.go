@@ -24,3 +24,19 @@ func TestCanSendAGobEncodedStructure(t *testing.T) {
 		t.Errorf("Expected %v, but received %v", expected, received)
 	}
 }
+
+func TestCanReceiveAGobEncodedStructure(t *testing.T) {
+	remote, local := net.Pipe()
+
+	var expected any
+	expected = []string{"Hello World", "Hola Mundo", "Olá Mundo"}
+	encoder := gob.NewEncoder(remote)
+	go encoder.Encode(&expected)
+
+	client := makeClient(local)
+	received := client.receive()
+
+	if !slices.Equal(expected.([]string), received.([]string)) {
+		t.Errorf("Expected %v, but received %v", expected, received)
+	}
+}
