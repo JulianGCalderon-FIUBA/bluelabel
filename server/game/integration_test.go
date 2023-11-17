@@ -1,9 +1,9 @@
 package game_test
 
 import (
-	"bluelabel/server/conntest"
 	"bluelabel/server/game"
 	"bluelabel/shared"
+	"encoding/gob"
 	"net"
 	"testing"
 
@@ -12,14 +12,17 @@ import (
 
 const lobbySize = 3
 
-func mockGame(lobbySize int) []*conntest.MockRemote {
+func mockGame(lobbySize int) []mockRemote {
 	local := make([]net.Conn, lobbySize)
-	remote := make([]*conntest.MockRemote, lobbySize)
+	remote := make([]mockRemote, lobbySize)
 	for i := range local {
 		localConn, remoteConn := connutil.AsyncPipe()
 
 		local[i] = localConn
-		remote[i] = conntest.NewMockRemote(remoteConn)
+		remote[i] = mockRemote{
+			gob.NewDecoder(remoteConn),
+			gob.NewEncoder(remoteConn),
+		}
 	}
 
 	game := game.MakeGame(local...)
@@ -32,7 +35,7 @@ func TestClientsReceiveInitialRound(t *testing.T) {
 	remotes := mockGame(lobbySize)
 
 	for _, remote := range remotes {
-		received, err := remote.Receive()
+		received, err := remote.receive()
 		if err != nil {
 			t.Errorf("Could not read from remote: %s", err)
 		}
@@ -42,4 +45,18 @@ func TestClientsReceiveInitialRound(t *testing.T) {
 			t.Errorf("Did not received a round")
 		}
 	}
+}
+
+type mockRemote struct {
+	*gob.Decoder
+	*gob.Encoder
+}
+
+func (c *mockRemote) send(structure any) error {
+	return c.Encoder.Encode(structure)
+}
+
+func (c *mockRemote) receive() (message any, err error) {
+	err = c.Decoder.Decode(&message)
+	return
 }
