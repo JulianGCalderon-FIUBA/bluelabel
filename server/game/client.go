@@ -22,11 +22,11 @@ func makeClient(connection net.Conn) client {
 	}
 }
 
-func (c *client) loop() {
-	for {
-		// message := c.receive()
-	}
-}
+// func (c *client) loop() {
+// 	for {
+// 		message := c.receive()
+// 	}
+// }
 
 // Sends a gob-enconded structure to the client, as an interface.
 func (c *client) send(structure any) error {

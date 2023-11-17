@@ -2,6 +2,8 @@ package game
 
 import (
 	"bluelabel/shared"
+	"encoding/gob"
+	"fmt"
 	"math/rand"
 	"net"
 )
@@ -18,6 +20,8 @@ func MakeGame(clientConnections ...net.Conn) Game {
 		clients[i] = makeClient(c)
 	}
 
+	gob.Register(shared.Round{})
+
 	return Game{
 		clients,
 	}
@@ -26,13 +30,16 @@ func MakeGame(clientConnections ...net.Conn) Game {
 // Starts the game loop. This function is blocking.
 func (g *Game) PlayGame() {
 	round := shared.Round{Character: randomRune()}
-	g.broadcast(&round)
+	err := g.broadcast(round)
+	if err != nil {
+		fmt.Printf("Could not broadcast message: %s", err)
+	}
 }
 
 // Sends a gob-encoded structure to each client.
 func (g *Game) broadcast(structure any) error {
 	for _, client := range g.clients {
-		err := client.send(structure)
+		err := client.send(&structure)
 		if err != nil {
 			return err
 		}
