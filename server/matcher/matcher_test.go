@@ -23,6 +23,7 @@ func TestLobbySizeIsCorrect(t *testing.T) {
 		ch <- len(connections)
 	}
 	matcher := matcher.NewMatcher(lobbySize, matcher.MatchStarterFunc(starter))
+
 	for _, c := range pipes {
 		matcher.Match(c[1])
 	}
