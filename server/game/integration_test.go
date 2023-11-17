@@ -12,20 +12,6 @@ import (
 
 const lobbySize = 3
 
-type mockRemote struct {
-	*gob.Decoder
-	*gob.Encoder
-}
-
-func (c *mockRemote) send(structure any) error {
-	return c.Encoder.Encode(structure)
-}
-
-func (c *mockRemote) receive() (message any, err error) {
-	err = c.Decoder.Decode(&message)
-	return
-}
-
 func mockGame(lobbySize int) []mockRemote {
 	local := make([]net.Conn, lobbySize)
 	remote := make([]mockRemote, lobbySize)
@@ -59,4 +45,18 @@ func TestClientsReceiveInitialRound(t *testing.T) {
 			t.Errorf("Did not received a round")
 		}
 	}
+}
+
+type mockRemote struct {
+	*gob.Decoder
+	*gob.Encoder
+}
+
+func (c *mockRemote) send(structure any) error {
+	return c.Encoder.Encode(structure)
+}
+
+func (c *mockRemote) receive() (message any, err error) {
+	err = c.Decoder.Decode(&message)
+	return
 }
