@@ -1,8 +1,6 @@
-package game_test
+package game
 
 import (
-	"bluelabel/server/game"
-	"bluelabel/shared"
 	"encoding/gob"
 	"net"
 	"testing"
@@ -10,12 +8,9 @@ import (
 	"github.com/cbeuw/connutil"
 )
 
-// Este archivo tiene codigo repetido con los `game_tests.go`, pero creo que esta repeticion es accidental, y mas adelante puede variar.
-// Debido a esto, no me apuro a corregirlo. La escencia de los tests es distinta
-
 const lobbySize = 3
 
-func mockGame(lobbySize int) []mockRemote {
+func mockGame(lobbySize int) ([]mockRemote, Game) {
 	local := make([]net.Conn, lobbySize)
 	remote := make([]mockRemote, lobbySize)
 	for i := range local {
@@ -28,14 +23,16 @@ func mockGame(lobbySize int) []mockRemote {
 		}
 	}
 
-	game := game.MakeGame(local...)
-	go game.PlayGame()
+	game := MakeGame(local...)
 
-	return remote
+	return remote, game
 }
 
-func TestClientsReceiveInitialRound(t *testing.T) {
-	remotes := mockGame(lobbySize)
+func TestBroadcastSendsInterfaceToAllClients(t *testing.T) {
+	remotes, game := mockGame(lobbySize)
+
+	expected := []string{"Hello World", "Hola Mundo", "Olá Mundo"}
+	game.broadcast(expected)
 
 	for _, remote := range remotes {
 		received, err := remote.receive()
@@ -43,7 +40,7 @@ func TestClientsReceiveInitialRound(t *testing.T) {
 			t.Errorf("Could not read from remote: %s", err)
 		}
 
-		_, ok := received.(shared.Round)
+		_, ok := received.([]string)
 		if !ok {
 			t.Errorf("Did not received a round")
 		}
