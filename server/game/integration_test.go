@@ -11,7 +11,7 @@ import (
 )
 
 // Este archivo tiene codigo repetido con los `game_tests.go`, pero creo que esta repeticion es accidental, y mas adelante puede variar.
-// Debido a esto, no me apuro a corregirlo. La escencia de los tests es distinta
+// Debido a esto, no me apuro a corregirlo. La escencia de los tests es distinta.
 
 const lobbySize = 3
 
