@@ -11,6 +11,11 @@ import (
 // Encapsulates the game data and behaviour
 type Game struct {
 	clients []client
+
+	// TODO: Probablemente sea mejor guardar estos campos en una estructura
+	// auxiliar de "ronda", para que sea mas ordenado
+	character rune
+	words     []map[shared.Category]string
 }
 
 // Creates a new game, for the given connections
@@ -23,18 +28,37 @@ func MakeGame(clientConnections ...net.Conn) Game {
 	gob.Register(shared.Round{})
 
 	return Game{
-		clients,
+		clients: clients,
 	}
 }
 
 // Starts the game loop. This function is blocking.
 func (g *Game) PlayGame() {
-	round := shared.Round{Character: randomRune()}
-	err := g.broadcast(round)
+	err := g.startRound()
 	if err != nil {
-		fmt.Printf("Could not broadcast message: %s", err)
+		fmt.Printf("Could not broadcast new round: %s", err)
+		return
 	}
+
+	g.waitStop()
+
+	g.broadcastWords()
+
+	g.waitVoting()
+
+	g.broadcastResults()
 }
+
+func (g *Game) startRound() error {
+	round := shared.Round{Character: randomRune()}
+	g.character = round.Character
+	return g.broadcast(round)
+}
+
+func (g *Game) waitStop() error         { return nil }
+func (g *Game) broadcastWords() error   { return nil }
+func (g *Game) waitVoting() error       { return nil }
+func (g *Game) broadcastResults() error { return nil }
 
 // Sends a gob-encoded structure to each client.
 func (g *Game) broadcast(structure any) error {
