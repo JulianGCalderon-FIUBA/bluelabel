@@ -57,7 +57,10 @@ func TestClientsReceiveStopNotify(t *testing.T) {
 		remote.receive()
 	}
 
-	remotes[0].send(shared.StopRequest{})
+	err := remotes[0].send(shared.StopRequest{})
+	if err != nil {
+		t.Errorf("Could not send stop request to server: %s", err)
+	}
 
 	for _, remote := range remotes[1:] {
 		received, err := remote.receive()

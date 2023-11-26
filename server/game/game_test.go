@@ -47,6 +47,37 @@ func TestBroadcastSendsInterfaceToAllClients(t *testing.T) {
 	}
 }
 
+func TestBroadcastAllButSendsInterfaceToAllClientsButOne(t *testing.T) {
+	remotes, game := mockGame(lobbySize)
+
+	expected := []string{"Hello World", "Hola Mundo", "Olá Mundo"}
+	game.broadcastAllBut(expected, 0)
+
+	ch := make(chan struct{})
+	go func() {
+		remotes[0].receive()
+		ch <- struct{}{}
+	}()
+
+	for _, remote := range remotes[1:] {
+		received, err := remote.receive()
+		if err != nil {
+			t.Errorf("Could not read from remote: %s", err)
+		}
+
+		_, ok := received.([]string)
+		if !ok {
+			t.Errorf("Did not received a round")
+		}
+	}
+
+	select {
+	case <-ch:
+		t.Errorf("Should have not received a message")
+	default:
+	}
+}
+
 type mockRemote struct {
 	*gob.Decoder
 	*gob.Encoder
