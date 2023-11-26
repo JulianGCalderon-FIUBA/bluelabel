@@ -36,6 +36,9 @@ func (c *client) receive() (message any) {
 	return
 }
 
+// Reads continiously from the connection, and sends messages to the
+// corresponding channels.
+// TODO: Deberiamos evitar que guarde mensajes que todavia no necesita
 func (c *client) loop() {
 	for {
 		msg := c.receive()

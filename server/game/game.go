@@ -53,12 +53,14 @@ func (g *Game) PlayGame() {
 	g.broadcastResults()
 }
 
+// Sends a round message to every client
 func (g *Game) startRound() error {
 	round := shared.Round{Character: randomRune()}
 	g.character = round.Character
 	return g.broadcast(round)
 }
 
+// Waits for all clients to send a StopRequest message
 func (g *Game) waitStop() error {
 	stops := make([]chan shared.StopRequest, len(g.clients))
 	for i := range stops {
@@ -87,6 +89,7 @@ func (g *Game) waitOneStop(stops chan indexedMessage[shared.StopRequest]) int {
 }
 
 // Wait for all the remaining stop requests
+// TODO: Agregar un timeout para que no espere eternamente
 func (g *Game) waitAllStop(stops chan indexedMessage[shared.StopRequest]) {
 	for i := 0; i < len(g.clients)-1; i++ {
 		stop := <-stops
