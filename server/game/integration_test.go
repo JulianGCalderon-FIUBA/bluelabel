@@ -21,11 +21,11 @@ func mockGame(lobbySize int) []mockRemote {
 	for i := range local {
 		localConn, remoteConn := connutil.AsyncPipe()
 
+		mockRemote := newMockRemote(remoteConn)
+
 		local[i] = localConn
-		remote[i] = mockRemote{
-			gob.NewDecoder(remoteConn),
-			gob.NewEncoder(remoteConn),
-		}
+		remote[i] = *mockRemote
+
 	}
 
 	game := game.MakeGame(local...)
@@ -50,13 +50,42 @@ func TestClientsReceiveInitialRound(t *testing.T) {
 	}
 }
 
+func TestClientsReceiveStopNotify(t *testing.T) {
+	remotes := mockGame(lobbySize)
+
+	for _, remote := range remotes {
+		remote.receive()
+	}
+
+	remotes[0].send(shared.StopRequest{})
+
+	for _, remote := range remotes[1:] {
+		received, err := remote.receive()
+		if err != nil {
+			t.Errorf("Could not read from remote: %s", err)
+		}
+
+		_, ok := received.(shared.StopNotify)
+		if !ok {
+			t.Errorf("Did not received a stop notify")
+		}
+	}
+}
+
 type mockRemote struct {
 	*gob.Decoder
 	*gob.Encoder
 }
 
+func newMockRemote(c net.Conn) *mockRemote {
+	return &mockRemote{
+		gob.NewDecoder(c),
+		gob.NewEncoder(c),
+	}
+}
+
 func (c *mockRemote) send(structure any) error {
-	return c.Encoder.Encode(structure)
+	return c.Encoder.Encode(&structure)
 }
 
 func (c *mockRemote) receive() (message any, err error) {

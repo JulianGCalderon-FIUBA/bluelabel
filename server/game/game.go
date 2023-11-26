@@ -15,7 +15,7 @@ type Game struct {
 	// TODO: Probablemente sea mejor guardar estos campos en una estructura
 	// auxiliar de "ronda", para que sea mas ordenado
 	character rune
-	words     []map[shared.Category]string
+	words     map[int]map[shared.Category]string
 }
 
 // Creates a new game, for the given connections
@@ -23,13 +23,16 @@ func MakeGame(clientConnections ...net.Conn) Game {
 	clients := make([]client, len(clientConnections))
 	for i, c := range clientConnections {
 		clients[i] = makeClient(c)
-		clients[i].loop()
+		go clients[i].loop()
 	}
 
 	gob.Register(shared.Round{})
+	gob.Register(shared.StopRequest{})
+	gob.Register(shared.StopNotify{})
 
 	return Game{
 		clients: clients,
+		words:   make(map[int]map[shared.Category]string),
 	}
 }
 
@@ -57,37 +60,38 @@ func (g *Game) startRound() error {
 }
 
 func (g *Game) waitStop() error {
-	stops := make(chan struct {
-		int
-		shared.StopRequest
-	})
-	for i, c := range g.clients {
-		go func(i int, c client) {
-			stops <- struct {
-				int
-				shared.StopRequest
-			}{i, c.receiveStop()}
-		}(i, c)
+	stops := make([]chan shared.StopRequest, len(g.clients))
+	for i := range stops {
+		stops[i] = g.clients[i].stops
 	}
 
-	stop := <-stops
-	first := stop.int
-	g.words[first] = stop.StopRequest.Words
+	indexed_stops := mergeChannel(stops...)
 
-	var stopRequest any = shared.StopRequest{}
-	for i, c := range g.clients {
-		if i == first {
-			continue
-		}
-		c.send(&stopRequest)
-	}
+	first_stop_id := g.waitOneStop(indexed_stops)
+	g.broadcastAllBut(shared.StopNotify{}, first_stop_id)
 
-	for i := 0; i < len(g.clients)-1; i++ {
-		stop := <-stops
-		g.words[stop.int] = stop.StopRequest.Words
-	}
+	g.waitAllStop(indexed_stops)
 
 	return nil
+}
+
+// Wait for one stop request, and return the id of the client
+// who send it.
+func (g *Game) waitOneStop(stops chan indexedMessage[shared.StopRequest]) int {
+
+	first_stop := <-stops
+	first_id := first_stop.id
+	g.words[first_id] = first_stop.msg.Words
+
+	return first_id
+}
+
+// Wait for all the remaining stop requests
+func (g *Game) waitAllStop(stops chan indexedMessage[shared.StopRequest]) {
+	for i := 0; i < len(g.clients)-1; i++ {
+		stop := <-stops
+		g.words[stop.id] = stop.msg.Words
+	}
 }
 
 func (g *Game) broadcastWords() error   { return nil }
@@ -106,7 +110,37 @@ func (g *Game) broadcast(structure any) error {
 	return nil
 }
 
+// Sends a gob-encoded structure to every client, except one.
+func (g *Game) broadcastAllBut(message any, first_id int) {
+	for i, c := range g.clients {
+		if i != first_id {
+			c.send(&message)
+		}
+	}
+}
+
 // Returns a random rune, from 'a' to 'z'
 func randomRune() rune {
 	return rune('a' + rand.Intn('c'+1-'a'))
+}
+
+// Represents a message received from a merge channel
+type indexedMessage[T any] struct {
+	id  int
+	msg T
+}
+
+// Merges an array of channels into a single merge channel, receiving
+// indexed messages.
+func mergeChannel[T any](chs ...chan T) chan indexedMessage[T] {
+	merge := make(chan indexedMessage[T])
+	for i, c := range chs {
+		go func(i int, c chan T) {
+			merge <- indexedMessage[T]{
+				i, <-c,
+			}
+		}(i, c)
+	}
+
+	return merge
 }

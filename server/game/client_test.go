@@ -1,14 +1,10 @@
 package game
 
 import (
-	"bluelabel/shared"
 	"encoding/gob"
-	"maps"
 	"net"
 	"slices"
 	"testing"
-
-	"github.com/cbeuw/connutil"
 )
 
 func TestCanSendAGobEncodedStructure(t *testing.T) {
@@ -42,29 +38,5 @@ func TestCanReceiveAGobEncodedStructure(t *testing.T) {
 
 	if !slices.Equal(expected.([]string), received.([]string)) {
 		t.Errorf("Expected %v, but received %v", expected, received)
-	}
-}
-
-func TestSkipsMessageIfNoWaiter(t *testing.T) {
-	_, local := connutil.AsyncPipe()
-
-	client := makeClient(local)
-
-	expected := shared.StopRequest{}
-	var message any = expected
-	client.handleMessage(&message)
-
-	stop := make(chan shared.StopRequest)
-
-	go func() {
-		stop <- client.receiveStop()
-	}()
-
-	go client.handleMessage(&message)
-
-	received := <-stop
-
-	if !maps.Equal(expected.Words, received.Words) {
-		t.Fatalf("Expected %v, but received %v", message, received)
 	}
 }

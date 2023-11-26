@@ -39,20 +39,10 @@ func (c *client) receive() (message any) {
 func (c *client) loop() {
 	for {
 		msg := c.receive()
-		c.handleMessage(msg)
-	}
-}
-
-func (c *client) handleMessage(msg any) {
-	stopMsg, ok := msg.(shared.StopRequest)
-	if ok {
-		select {
-		case c.stops <- stopMsg:
-			return
+		switch received := msg.(type) {
+		case shared.StopRequest:
+			c.stops <- received
 		default:
 		}
 	}
-}
-func (c *client) receiveStop() shared.StopRequest {
-	return <-c.stops
 }
