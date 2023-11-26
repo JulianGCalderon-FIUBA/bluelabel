@@ -23,6 +23,7 @@ func MakeGame(clientConnections ...net.Conn) Game {
 	clients := make([]client, len(clientConnections))
 	for i, c := range clientConnections {
 		clients[i] = makeClient(c)
+		clients[i].loop()
 	}
 
 	gob.Register(shared.Round{})
@@ -55,7 +56,40 @@ func (g *Game) startRound() error {
 	return g.broadcast(round)
 }
 
-func (g *Game) waitStop() error         { return nil }
+func (g *Game) waitStop() error {
+	stops := make(chan struct {
+		int
+		shared.StopRequest
+	})
+	for i, c := range g.clients {
+		go func(i int, c client) {
+			stops <- struct {
+				int
+				shared.StopRequest
+			}{i, c.receiveStop()}
+		}(i, c)
+	}
+
+	stop := <-stops
+	first := stop.int
+	g.words[first] = stop.StopRequest.Words
+
+	var stopRequest any = shared.StopRequest{}
+	for i, c := range g.clients {
+		if i == first {
+			continue
+		}
+		c.send(&stopRequest)
+	}
+
+	for i := 0; i < len(g.clients)-1; i++ {
+		stop := <-stops
+		g.words[stop.int] = stop.StopRequest.Words
+	}
+
+	return nil
+}
+
 func (g *Game) broadcastWords() error   { return nil }
 func (g *Game) waitVoting() error       { return nil }
 func (g *Game) broadcastResults() error { return nil }

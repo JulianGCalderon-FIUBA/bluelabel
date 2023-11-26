@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bluelabel/shared"
 	"encoding/gob"
 	"net"
 )
@@ -9,6 +10,7 @@ import (
 type client struct {
 	encoder *gob.Encoder
 	decoder *gob.Decoder
+	stops   chan shared.StopRequest
 }
 
 // Creates a new client
@@ -17,8 +19,9 @@ func makeClient(connection net.Conn) client {
 	decoder := gob.NewDecoder(connection)
 
 	return client{
-		encoder,
-		decoder,
+		encoder: encoder,
+		decoder: decoder,
+		stops:   make(chan shared.StopRequest),
 	}
 }
 
@@ -31,4 +34,25 @@ func (c *client) send(structure any) error {
 func (c *client) receive() (message any) {
 	c.decoder.Decode(&message)
 	return
+}
+
+func (c *client) loop() {
+	for {
+		msg := c.receive()
+		c.handleMessage(msg)
+	}
+}
+
+func (c *client) handleMessage(msg any) {
+	stopMsg, ok := msg.(shared.StopRequest)
+	if ok {
+		select {
+		case c.stops <- stopMsg:
+			return
+		default:
+		}
+	}
+}
+func (c *client) receiveStop() shared.StopRequest {
+	return <-c.stops
 }
