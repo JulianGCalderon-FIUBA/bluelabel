@@ -16,11 +16,10 @@ func mockGame(lobbySize int) ([]mockRemote, Game) {
 	for i := range local {
 		localConn, remoteConn := connutil.AsyncPipe()
 
+		mockRemote := newMockRemote(remoteConn)
+
 		local[i] = localConn
-		remote[i] = mockRemote{
-			gob.NewDecoder(remoteConn),
-			gob.NewEncoder(remoteConn),
-		}
+		remote[i] = *mockRemote
 	}
 
 	game := MakeGame(local...)
@@ -81,6 +80,13 @@ func TestBroadcastAllButSendsInterfaceToAllClientsButOne(t *testing.T) {
 type mockRemote struct {
 	*gob.Decoder
 	*gob.Encoder
+}
+
+func newMockRemote(c net.Conn) *mockRemote {
+	return &mockRemote{
+		gob.NewDecoder(c),
+		gob.NewEncoder(c),
+	}
 }
 
 func (c *mockRemote) send(structure any) error {

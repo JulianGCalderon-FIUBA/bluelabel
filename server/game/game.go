@@ -67,7 +67,7 @@ func (g *Game) waitStop() error {
 		stops[i] = g.clients[i].stops
 	}
 
-	indexed_stops := mergeChannel(stops...)
+	indexed_stops := mergeChannels(stops...)
 
 	first_stop_id := g.waitOneStop(indexed_stops)
 	g.broadcastAllBut(shared.StopNotify{}, first_stop_id)
@@ -80,12 +80,10 @@ func (g *Game) waitStop() error {
 // Wait for one stop request, and return the id of the client
 // who send it.
 func (g *Game) waitOneStop(stops chan indexedMessage[shared.StopRequest]) int {
+	stop := <-stops
+	g.words[stop.id] = stop.msg.Words
 
-	first_stop := <-stops
-	first_id := first_stop.id
-	g.words[first_id] = first_stop.msg.Words
-
-	return first_id
+	return stop.id
 }
 
 // Wait for all the remaining stop requests
@@ -135,7 +133,9 @@ type indexedMessage[T any] struct {
 
 // Merges an array of channels into a single merge channel, receiving
 // indexed messages.
-func mergeChannel[T any](chs ...chan T) chan indexedMessage[T] {
+// The id of the message received corresponds to the index of the channel which
+// sent it.
+func mergeChannels[T any](chs ...chan T) chan indexedMessage[T] {
 	merge := make(chan indexedMessage[T])
 	for i, c := range chs {
 		go func(i int, c chan T) {
