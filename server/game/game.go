@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"time"
 )
+
+const stopTimeoutDuration = 1 * time.Second
 
 // Encapsulates the game data and behaviour
 type Game struct {
@@ -29,6 +32,10 @@ func MakeGame(clientConnections ...net.Conn) Game {
 	gob.Register(shared.Round{})
 	gob.Register(shared.StopRequest{})
 	gob.Register(shared.StopNotify{})
+	gob.Register(shared.Words{})
+	gob.Register(shared.WordsValidation{})
+	gob.Register(shared.Score{})
+	gob.Register(shared.End{})
 
 	return Game{
 		clients: clients,
@@ -44,13 +51,18 @@ func (g *Game) PlayGame() {
 		return
 	}
 
-	g.waitStop()
+	err = g.waitStop()
+	if err != nil {
+		fmt.Printf("Could not wait for stop: %s", err)
+	}
 
 	g.broadcastWords()
 
 	g.waitValidation()
 
 	g.broadcastScore()
+
+	g.broadcastEnd()
 }
 
 // Sends a round message to every client
@@ -62,19 +74,26 @@ func (g *Game) startRound() error {
 
 // Waits for all clients to send a StopRequest message
 func (g *Game) waitStop() error {
-	stops := make([]chan shared.StopRequest, len(g.clients))
-	for i := range stops {
-		stops[i] = g.clients[i].stops
-	}
+	stops := buildStopArray(g.clients...)
 
 	indexed_stops := mergeChannels(stops...)
 
 	first_stop_id := g.waitOneStop(indexed_stops)
+
 	g.broadcastAllBut(shared.StopNotify{}, first_stop_id)
 
-	g.waitAllStop(indexed_stops)
+	g.waitAllStop(indexed_stops, stopTimeoutDuration)
 
 	return nil
+}
+
+// Builds an array with the stop channel for every client
+func buildStopArray(clients ...client) []chan shared.StopRequest {
+	stops := make([]chan shared.StopRequest, len(clients))
+	for i := range stops {
+		stops[i] = clients[i].stops
+	}
+	return stops
 }
 
 // Wait for one stop request, and return the id of the client
@@ -87,17 +106,22 @@ func (g *Game) waitOneStop(stops chan indexedMessage[shared.StopRequest]) int {
 }
 
 // Wait for all the remaining stop requests
-// TODO: Agregar un timeout para que no espere eternamente
-func (g *Game) waitAllStop(stops chan indexedMessage[shared.StopRequest]) {
-	for i := 0; i < len(g.clients)-1; i++ {
-		stop := <-stops
-		g.words[stop.id] = stop.msg.Words
+func (g *Game) waitAllStop(stops chan indexedMessage[shared.StopRequest], timeoutDuration time.Duration) {
+	timeout := time.NewTimer(timeoutDuration)
+	for len(g.words) < len(g.clients) {
+		select {
+		case stop := <-stops:
+			g.words[stop.id] = stop.msg.Words
+		case <-timeout.C:
+			return
+		}
 	}
 }
 
 func (g *Game) broadcastWords() error { return nil }
 func (g *Game) waitValidation() error { return nil }
 func (g *Game) broadcastScore() error { return nil }
+func (g *Game) broadcastEnd() error   { return nil }
 
 // Sends a gob-encoded structure to each client.
 func (g *Game) broadcast(structure any) error {

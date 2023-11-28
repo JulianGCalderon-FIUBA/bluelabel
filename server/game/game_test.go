@@ -1,9 +1,11 @@
 package game
 
 import (
+	"bluelabel/shared"
 	"encoding/gob"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/cbeuw/connutil"
 )
@@ -77,6 +79,47 @@ func TestBroadcastAllButSendsInterfaceToAllClientsButOne(t *testing.T) {
 	}
 }
 
+func TestCanWaitForFirstStopRequest(t *testing.T) {
+	remotes, game := mockGame(lobbySize)
+
+	stops := buildStopArray(game.clients...)
+	indexedStops := mergeChannels(stops...)
+
+	remotes[0].sendInterface(shared.StopRequest{})
+
+	game.waitOneStop(indexedStops)
+}
+
+func TestCanWaitForAllStopRequest(t *testing.T) {
+	remotes, game := mockGame(lobbySize)
+
+	stops := buildStopArray(game.clients...)
+	indexedStops := mergeChannels(stops...)
+
+	for i := range remotes {
+		remotes[i].sendInterface(shared.StopRequest{})
+	}
+
+	game.waitAllStop(indexedStops, time.Hour)
+}
+
+func TestCanWaitForAllStopRequestWithTimeout(t *testing.T) {
+	remotes, game := mockGame(lobbySize)
+
+	stops := buildStopArray(game.clients...)
+	indexedStops := mergeChannels(stops...)
+
+	for i := 0; i < len(remotes)/2; i++ {
+		remotes[i].sendInterface(shared.StopRequest{})
+	}
+
+	game.waitAllStop(indexedStops, 100*time.Millisecond)
+
+	if len(game.words) != len(remotes)/2 {
+		t.Errorf("Expected to receive %v stop requests, but received %v", len(remotes)/2, len(game.words))
+	}
+}
+
 type mockRemote struct {
 	*gob.Decoder
 	*gob.Encoder
@@ -91,6 +134,10 @@ func newMockRemote(c net.Conn) *mockRemote {
 
 func (c *mockRemote) send(structure any) error {
 	return c.Encoder.Encode(structure)
+}
+
+func (c *mockRemote) sendInterface(structure any) error {
+	return c.Encoder.Encode(&structure)
 }
 
 func (c *mockRemote) receive() (message any, err error) {
