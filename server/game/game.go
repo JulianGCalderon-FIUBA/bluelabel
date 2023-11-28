@@ -48,9 +48,9 @@ func (g *Game) PlayGame() {
 
 	g.broadcastWords()
 
-	g.waitVoting()
+	g.waitValidation()
 
-	g.broadcastResults()
+	g.broadcastScore()
 }
 
 // Sends a round message to every client
@@ -95,9 +95,9 @@ func (g *Game) waitAllStop(stops chan indexedMessage[shared.StopRequest]) {
 	}
 }
 
-func (g *Game) broadcastWords() error   { return nil }
-func (g *Game) waitVoting() error       { return nil }
-func (g *Game) broadcastResults() error { return nil }
+func (g *Game) broadcastWords() error { return nil }
+func (g *Game) waitValidation() error { return nil }
+func (g *Game) broadcastScore() error { return nil }
 
 // Sends a gob-encoded structure to each client.
 func (g *Game) broadcast(structure any) error {
