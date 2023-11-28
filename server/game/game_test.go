@@ -87,7 +87,11 @@ func TestCanWaitForFirstStopRequest(t *testing.T) {
 
 	remotes[0].sendInterface(shared.StopRequest{})
 
-	game.waitOneStop(indexedStops)
+	senderId := game.waitOneStop(indexedStops)
+
+	if senderId != 0 {
+		t.Errorf("Expected sender id %v, but got %v", 0, senderId)
+	}
 }
 
 func TestCanWaitForAllStopRequest(t *testing.T) {
