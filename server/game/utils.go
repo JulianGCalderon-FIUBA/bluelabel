@@ -8,7 +8,7 @@ func randomRune() rune {
 }
 
 // Represents a concrete message received from a specific client
-type MessageWithId[T any] struct {
+type MessageFromClient[T any] struct {
 	id  int
 	msg T
 }

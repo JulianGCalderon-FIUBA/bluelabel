@@ -75,8 +75,12 @@ func (g *Game) startRound() error {
 // Sends a StopNotify to every other client after the first received StopRequest.
 // If the clients don't send a StopRequest after certain timeout time, the
 // function returns prematurely.
+//
+// TODO: Esta función es batante larga y confusa, pero todavía no la separe ya
+// que voy a ver primero que otras funcionalidades comparte con el resto de
+// etapas de la ronda.
 func (g *Game) waitStop() error {
-	messagesWithIds := make(chan MessageWithId[shared.StopRequest])
+	messagesFromClients := make(chan MessageFromClient[shared.StopRequest])
 	for i, c := range g.clients {
 		go func(i int, c client) {
 			stopRequest, err := receiveConcrete[shared.StopRequest](c)
@@ -85,7 +89,7 @@ func (g *Game) waitStop() error {
 				return
 			}
 
-			messagesWithIds <- MessageWithId[shared.StopRequest]{
+			messagesFromClients <- MessageFromClient[shared.StopRequest]{
 				i, stopRequest,
 			}
 			return
@@ -93,7 +97,7 @@ func (g *Game) waitStop() error {
 		}(i, c)
 	}
 
-	firstStop := <-messagesWithIds
+	firstStop := <-messagesFromClients
 	g.words[firstStop.id] = firstStop.msg.Words
 
 	g.broadcastAllBut(shared.StopNotify{}, firstStop.id)
@@ -101,7 +105,7 @@ func (g *Game) waitStop() error {
 	timeout := time.NewTimer(stopTimeoutDuration)
 	for len(g.words) < len(g.clients) {
 		select {
-		case stop := <-messagesWithIds:
+		case stop := <-messagesFromClients:
 			g.words[stop.id] = stop.msg.Words
 		case <-timeout.C:
 			return nil
