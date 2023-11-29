@@ -73,6 +73,22 @@ func TestClientsReceiveStopNotify(t *testing.T) {
 			t.Errorf("Did not received a stop notify")
 		}
 	}
+
+	ch := make(chan struct{})
+	go func(remote mockRemote) {
+		_, err := remote.receive()
+		if err != nil {
+			t.Errorf("Could not received from remote: %s", err)
+		}
+
+		ch <- struct{}{}
+	}(remotes[0])
+
+	select {
+	case <-ch:
+		t.Errorf("Should not have received from server")
+	default:
+	}
 }
 
 func TestClientsDontReceiveStopNotifyIfNoStopRequestWasSent(t *testing.T) {

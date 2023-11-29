@@ -4,7 +4,7 @@ import (
 	"bluelabel/shared"
 	"encoding/gob"
 	"fmt"
-	"math/rand"
+	"log"
 	"net"
 	"time"
 )
@@ -26,7 +26,6 @@ func MakeGame(clientConnections ...net.Conn) Game {
 	clients := make([]client, len(clientConnections))
 	for i, c := range clientConnections {
 		clients[i] = makeClient(c)
-		go clients[i].loop()
 	}
 
 	gob.Register(shared.Round{})
@@ -73,49 +72,43 @@ func (g *Game) startRound() error {
 }
 
 // Waits for all clients to send a StopRequest message
+// Sends a StopNotify to every other client after the first received StopRequest.
+// If the clients don't send a StopRequest after certain timeout time, the
+// function returns prematurely.
 func (g *Game) waitStop() error {
-	stops := buildStopArray(g.clients...)
+	messagesWithIds := make(chan MessageWithId[shared.StopRequest])
+	for i, c := range g.clients {
+		go func(i int, c client) {
+			stopRequest, err := receiveConcrete[shared.StopRequest](c)
+			if err != nil {
+				log.Printf("Could not receive from client: %s", err)
+				return
+			}
 
-	indexed_stops := mergeChannels(stops...)
+			messagesWithIds <- MessageWithId[shared.StopRequest]{
+				i, stopRequest,
+			}
+			return
 
-	first_stop_id := g.waitOneStop(indexed_stops)
-
-	g.broadcastAllBut(shared.StopNotify{}, first_stop_id)
-
-	g.waitAllStop(indexed_stops, stopTimeoutDuration)
-
-	return nil
-}
-
-// Builds an array with the stop channel for every client
-func buildStopArray(clients ...client) []chan shared.StopRequest {
-	stops := make([]chan shared.StopRequest, len(clients))
-	for i := range stops {
-		stops[i] = clients[i].stops
+		}(i, c)
 	}
-	return stops
-}
 
-// Wait for one stop request, and return the id of the client
-// who send it.
-func (g *Game) waitOneStop(stops chan indexedMessage[shared.StopRequest]) int {
-	stop := <-stops
-	g.words[stop.id] = stop.msg.Words
+	firstStop := <-messagesWithIds
+	g.words[firstStop.id] = firstStop.msg.Words
 
-	return stop.id
-}
+	g.broadcastAllBut(shared.StopNotify{}, firstStop.id)
 
-// Wait for all the remaining stop requests
-func (g *Game) waitAllStop(stops chan indexedMessage[shared.StopRequest], timeoutDuration time.Duration) {
-	timeout := time.NewTimer(timeoutDuration)
+	timeout := time.NewTimer(stopTimeoutDuration)
 	for len(g.words) < len(g.clients) {
 		select {
-		case stop := <-stops:
+		case stop := <-messagesWithIds:
 			g.words[stop.id] = stop.msg.Words
 		case <-timeout.C:
-			return
+			return nil
 		}
 	}
+
+	return nil
 }
 
 func (g *Game) broadcastWords() error { return nil }
@@ -126,7 +119,7 @@ func (g *Game) broadcastEnd() error   { return nil }
 // Sends a gob-encoded structure to each client.
 func (g *Game) broadcast(structure any) error {
 	for _, client := range g.clients {
-		err := client.send(&structure)
+		err := client.send(structure)
 		if err != nil {
 			return err
 		}
@@ -139,35 +132,7 @@ func (g *Game) broadcast(structure any) error {
 func (g *Game) broadcastAllBut(message any, first_id int) {
 	for i, c := range g.clients {
 		if i != first_id {
-			c.send(&message)
+			c.send(message)
 		}
 	}
-}
-
-// Returns a random rune, from 'a' to 'z'
-func randomRune() rune {
-	return rune('a' + rand.Intn('c'+1-'a'))
-}
-
-// Represents a message received from a merge channel
-type indexedMessage[T any] struct {
-	id  int
-	msg T
-}
-
-// Merges an array of channels into a single merge channel, receiving
-// indexed messages.
-// The id of the message received corresponds to the index of the channel which
-// sent it.
-func mergeChannels[T any](chs ...chan T) chan indexedMessage[T] {
-	merge := make(chan indexedMessage[T])
-	for i, c := range chs {
-		go func(i int, c chan T) {
-			merge <- indexedMessage[T]{
-				i, <-c,
-			}
-		}(i, c)
-	}
-
-	return merge
 }

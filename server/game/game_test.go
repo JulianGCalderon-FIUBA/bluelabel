@@ -1,11 +1,9 @@
 package game
 
 import (
-	"bluelabel/shared"
 	"encoding/gob"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/cbeuw/connutil"
 )
@@ -33,7 +31,10 @@ func TestBroadcastSendsInterfaceToAllClients(t *testing.T) {
 	remotes, game := mockGame(lobbySize)
 
 	expected := []string{"Hello World", "Hola Mundo", "Olá Mundo"}
-	game.broadcast(expected)
+	err := game.broadcast(expected)
+	if err != nil {
+		t.Errorf("Could not broadcast to clients: %s", err)
+	}
 
 	for _, remote := range remotes {
 		received, err := remote.receive()
@@ -76,51 +77,6 @@ func TestBroadcastAllButSendsInterfaceToAllClientsButOne(t *testing.T) {
 	case <-ch:
 		t.Errorf("Should have not received a message")
 	default:
-	}
-}
-
-func TestCanWaitForFirstStopRequest(t *testing.T) {
-	remotes, game := mockGame(lobbySize)
-
-	stops := buildStopArray(game.clients...)
-	indexedStops := mergeChannels(stops...)
-
-	remotes[0].sendInterface(shared.StopRequest{})
-
-	senderId := game.waitOneStop(indexedStops)
-
-	if senderId != 0 {
-		t.Errorf("Expected sender id %v, but got %v", 0, senderId)
-	}
-}
-
-func TestCanWaitForAllStopRequest(t *testing.T) {
-	remotes, game := mockGame(lobbySize)
-
-	stops := buildStopArray(game.clients...)
-	indexedStops := mergeChannels(stops...)
-
-	for i := range remotes {
-		remotes[i].sendInterface(shared.StopRequest{})
-	}
-
-	game.waitAllStop(indexedStops, time.Hour)
-}
-
-func TestCanWaitForAllStopRequestWithTimeout(t *testing.T) {
-	remotes, game := mockGame(lobbySize)
-
-	stops := buildStopArray(game.clients...)
-	indexedStops := mergeChannels(stops...)
-
-	for i := 0; i < len(remotes)/2; i++ {
-		remotes[i].sendInterface(shared.StopRequest{})
-	}
-
-	game.waitAllStop(indexedStops, 100*time.Millisecond)
-
-	if len(game.words) != len(remotes)/2 {
-		t.Errorf("Expected to receive %v stop requests, but received %v", len(remotes)/2, len(game.words))
 	}
 }
 
