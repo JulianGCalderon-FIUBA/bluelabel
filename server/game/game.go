@@ -85,6 +85,7 @@ func (g *Game) waitStop() error {
 		go func(i int, c client) {
 			stopRequest, err := receiveConcrete[shared.StopRequest](c)
 			if err != nil {
+				// FIX: ¿Cómo se puede manejar este error?
 				log.Printf("Could not receive from client: %s", err)
 				return
 			}
@@ -115,7 +116,33 @@ func (g *Game) waitStop() error {
 	return nil
 }
 
-func (g *Game) broadcastWords() error { return nil }
+func (g *Game) broadcastWords() error {
+	wordListByCategory := buildWordListByCategory(g.words)
+	_ = wordListByCategory
+
+	return nil
+}
+
+// TEST: Debería hacer tests unitarios para esta función.
+func buildWordListByCategory(words map[int]map[shared.Category]string) map[shared.Category][]string {
+	wordsByCategory := make(map[shared.Category]map[string]struct{})
+	for _, clientWords := range words {
+		for category, word := range clientWords {
+			wordsByCategory[category][word] = struct{}{}
+		}
+	}
+
+	wordListByCategory := make(map[shared.Category][]string)
+	for category, words := range wordsByCategory {
+		wordListByCategory[category] = make([]string, len(words), 0)
+		for word := range words {
+			wordListByCategory[category] = append(wordListByCategory[category], word)
+		}
+	}
+
+	return wordListByCategory
+}
+
 func (g *Game) waitValidation() error { return nil }
 func (g *Game) broadcastScore() error { return nil }
 func (g *Game) broadcastEnd() error   { return nil }
