@@ -1,8 +1,11 @@
 package game
 
 import (
+	"bluelabel/shared"
 	"encoding/gob"
+	"maps"
 	"net"
+	"slices"
 	"testing"
 
 	"github.com/cbeuw/connutil"
@@ -78,6 +81,46 @@ func TestBroadcastAllButSendsInterfaceToAllClientsButOne(t *testing.T) {
 		t.Errorf("Should have not received a message")
 	default:
 	}
+}
+
+func TestCanGetWordListByCategory(t *testing.T) {
+	wordsByCategoryForClient := map[int]map[shared.Category]string{
+		0: {
+			shared.Color:   "Rojo",
+			shared.Animal:  "Rana",
+			shared.Pais:    "Rumania",
+			shared.Deporte: "Rugby",
+		},
+		1: {
+			shared.Color:  "Rosa",
+			shared.Animal: "Renacuajo",
+			shared.Pais:   "Rusia",
+		},
+		2: {
+			shared.Color:  "Rufo",
+			shared.Animal: "Rana",
+			shared.Pais:   "Rusia",
+		},
+	}
+
+	expected := map[shared.Category][]string{
+		shared.Color:   {"Rufo", "Rojo", "Rosa"},
+		shared.Animal:  {"Rana", "Renacuajo"},
+		shared.Pais:    {"Rusia", "Rumania"},
+		shared.Deporte: {"Rugby"},
+	}
+
+	result := buildWordListByCategory(wordsByCategoryForClient)
+
+	if !maps.EqualFunc(expected, result, func(m1, m2 []string) bool {
+		slices.Sort(m1)
+		slices.Sort(m2)
+
+		return slices.Equal(m1, m2)
+	}) {
+		t.Errorf("Expected %v, but got %v", expected, result)
+	}
+
 }
 
 type mockRemote struct {

@@ -128,13 +128,17 @@ func buildWordListByCategory(words map[int]map[shared.Category]string) map[share
 	wordsByCategory := make(map[shared.Category]map[string]struct{})
 	for _, clientWords := range words {
 		for category, word := range clientWords {
+			if wordsByCategory[category] == nil {
+				wordsByCategory[category] = make(map[string]struct{})
+			}
+
 			wordsByCategory[category][word] = struct{}{}
 		}
 	}
 
 	wordListByCategory := make(map[shared.Category][]string)
 	for category, words := range wordsByCategory {
-		wordListByCategory[category] = make([]string, len(words), 0)
+		wordListByCategory[category] = make([]string, 0, len(words))
 		for word := range words {
 			wordListByCategory[category] = append(wordListByCategory[category], word)
 		}
