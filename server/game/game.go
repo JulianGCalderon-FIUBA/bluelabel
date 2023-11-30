@@ -83,7 +83,7 @@ func (g *Game) startRound() error {
 // que voy a ver primero que otras funcionalidades comparte con el resto de
 // etapas de la ronda.
 func (g *Game) waitStop() error {
-	messagesFromClients := make(chan MessageFromClient[shared.StopRequest])
+	stopsFromClients := make(chan MessageFromClient[shared.StopRequest])
 	for i, c := range g.clients {
 		go func(i int, c client) {
 			stopRequest, err := receiveConcrete[shared.StopRequest](c)
@@ -93,7 +93,7 @@ func (g *Game) waitStop() error {
 				return
 			}
 
-			messagesFromClients <- MessageFromClient[shared.StopRequest]{
+			stopsFromClients <- MessageFromClient[shared.StopRequest]{
 				i, stopRequest,
 			}
 			return
@@ -101,7 +101,7 @@ func (g *Game) waitStop() error {
 		}(i, c)
 	}
 
-	firstStop := <-messagesFromClients
+	firstStop := <-stopsFromClients
 	g.words[firstStop.id] = firstStop.msg.Words
 
 	err := g.broadcastAllBut(shared.StopNotify{}, firstStop.id)
@@ -112,7 +112,7 @@ func (g *Game) waitStop() error {
 	timeout := time.NewTimer(stopTimeoutDuration)
 	for len(g.words) < len(g.clients) {
 		select {
-		case stop := <-messagesFromClients:
+		case stop := <-stopsFromClients:
 			g.words[stop.id] = stop.msg.Words
 		case <-timeout.C:
 			return nil
