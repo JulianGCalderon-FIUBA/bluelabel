@@ -55,13 +55,16 @@ func (g *Game) PlayGame() {
 		fmt.Printf("Could not wait for stop: %s", err)
 	}
 
-	g.broadcastWords()
+	err = g.broadcastWords()
+	if err != nil {
+		fmt.Printf("Could not broadcast words: %s", err)
+	}
 
-	g.waitValidation()
-
-	g.broadcastScore()
-
-	g.broadcastEnd()
+	// g.waitValidation()
+	//
+	// g.broadcastScore()
+	//
+	// g.broadcastEnd()
 }
 
 // Sends a round message to every client
@@ -101,7 +104,10 @@ func (g *Game) waitStop() error {
 	firstStop := <-messagesFromClients
 	g.words[firstStop.id] = firstStop.msg.Words
 
-	g.broadcastAllBut(shared.StopNotify{}, firstStop.id)
+	err := g.broadcastAllBut(shared.StopNotify{}, firstStop.id)
+	if err != nil {
+		return err
+	}
 
 	timeout := time.NewTimer(stopTimeoutDuration)
 	for len(g.words) < len(g.clients) {
@@ -118,33 +124,10 @@ func (g *Game) waitStop() error {
 
 func (g *Game) broadcastWords() error {
 	wordListByCategory := buildWordListByCategory(g.words)
-	_ = wordListByCategory
 
-	return nil
-}
+	words := shared.Words{Words: wordListByCategory}
 
-// TEST: Debería hacer tests unitarios para esta función.
-func buildWordListByCategory(words map[int]map[shared.Category]string) map[shared.Category][]string {
-	wordsByCategory := make(map[shared.Category]map[string]struct{})
-	for _, clientWords := range words {
-		for category, word := range clientWords {
-			if wordsByCategory[category] == nil {
-				wordsByCategory[category] = make(map[string]struct{})
-			}
-
-			wordsByCategory[category][word] = struct{}{}
-		}
-	}
-
-	wordListByCategory := make(map[shared.Category][]string)
-	for category, words := range wordsByCategory {
-		wordListByCategory[category] = make([]string, 0, len(words))
-		for word := range words {
-			wordListByCategory[category] = append(wordListByCategory[category], word)
-		}
-	}
-
-	return wordListByCategory
+	return g.broadcast(words)
 }
 
 func (g *Game) waitValidation() error { return nil }
@@ -152,6 +135,7 @@ func (g *Game) broadcastScore() error { return nil }
 func (g *Game) broadcastEnd() error   { return nil }
 
 // Sends a gob-encoded structure to each client.
+// FIX: ¿Es correcto devolver ante el primer error?
 func (g *Game) broadcast(structure any) error {
 	for _, client := range g.clients {
 		err := client.send(structure)
@@ -164,10 +148,15 @@ func (g *Game) broadcast(structure any) error {
 }
 
 // Sends a gob-encoded structure to every client, except one.
-func (g *Game) broadcastAllBut(message any, first_id int) {
-	for i, c := range g.clients {
+func (g *Game) broadcastAllBut(message any, first_id int) error {
+	for i, client := range g.clients {
 		if i != first_id {
-			c.send(message)
+			err := client.send(message)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }

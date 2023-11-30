@@ -118,6 +118,40 @@ func TestClientsDontReceiveStopNotifyIfNoStopRequestWasSent(t *testing.T) {
 	}
 }
 
+func TestClientsReceiveListOfWordsForValidation(t *testing.T) {
+	remotes := mockGame(lobbySize)
+
+	for _, remote := range remotes {
+		remote.receive()
+	}
+
+	err := remotes[0].send(shared.StopRequest{})
+	if err != nil {
+		t.Errorf("Could not send stop request to server: %s", err)
+	}
+
+	for _, remote := range remotes[1:] {
+		_, err := remote.receive()
+		if err != nil {
+			t.Errorf("Could not read from remote: %s", err)
+		}
+
+		remote.send(shared.StopRequest{})
+	}
+
+	for _, remote := range remotes {
+		received, err := remote.receive()
+		if err != nil {
+			t.Errorf("Could not read from remote: %s", err)
+		}
+
+		_, ok := received.(shared.Words)
+		if !ok {
+			t.Errorf("Did not received round words")
+		}
+	}
+}
+
 type mockRemote struct {
 	*gob.Decoder
 	*gob.Encoder
