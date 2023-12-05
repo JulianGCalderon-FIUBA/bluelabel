@@ -1,6 +1,11 @@
 package main
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	"fmt"
+
+	tea "github.com/charmbracelet/bubbletea"
+	zone "github.com/lrstanley/bubblezone"
+)
 
 type MenuOption int
 
@@ -14,9 +19,9 @@ var (
 )
 
 const (
-	QuickMath MenuOption = iota
-	RoomSearcher
-	Quit
+	QuickMatchOption MenuOption = iota
+	RoomSelectorOption
+	QuitOption
 )
 
 type menu struct {
@@ -31,20 +36,24 @@ func initialMenu() menu {
 	}
 }
 
-func (m *menu) selectOption(msg tea.KeyMsg) {
+func (m *menu) moveThroughOptions(msg tea.KeyMsg) {
 	switch msg.String() {
 	case "up":
-		if m.selectedOption == 0 {
-			m.selectedOption = len(m.options) - 1
-		} else {
-			m.selectedOption--
-		}
+		m.selectOption(m.selectedOption - 1)
 	case "down":
-		if m.selectedOption == len(m.options)-1 {
-			m.selectedOption = 0
-		} else {
-			m.selectedOption++
-		}
+		m.selectOption(m.selectedOption + 1)
+	}
+}
+
+func (m *menu) selectOption(option int) {
+	i := int(option)
+
+	if i >= 0 && i < len(m.options) {
+		m.selectedOption = i
+	} else if i < 0 {
+		m.selectedOption = len(m.options) - 1
+	} else {
+		m.selectedOption = 0
 	}
 }
 
@@ -52,10 +61,14 @@ func (m menu) show(viewportHeight int, viewportWidth int) string {
 	s := title
 
 	for i, option := range m.options {
+		zoneMarkName := fmt.Sprint("option ", i)
+
 		if i == m.selectedOption {
-			s += selectedOptionStyle().Render(option) + "\n\n"
+			s += zone.Mark(zoneMarkName, selectedOptionStyle().Render(option))
+			s += "\n"
 		} else {
-			s += option + "\n\n"
+			s += zone.Mark(zoneMarkName, optionStyle().Render(option))
+			s += "\n"
 		}
 	}
 
