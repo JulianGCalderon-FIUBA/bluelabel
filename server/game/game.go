@@ -17,8 +17,9 @@ type Game struct {
 
 	// TODO: Probablemente sea mejor guardar estos campos en una estructura
 	// auxiliar de "ronda", para que sea mas ordenado
-	character rune
-	words     map[int]map[shared.Category]string
+	character    rune
+	words        map[int]map[shared.Category]string
+	invalidWords map[shared.Category]map[string]struct{}
 }
 
 // Creates a new game, for the given connections
@@ -60,8 +61,11 @@ func (g *Game) PlayGame() {
 		fmt.Printf("Could not broadcast words: %s", err)
 	}
 
-	// g.waitValidation()
-	//
+	err = g.waitValidation()
+	if err != nil {
+		fmt.Printf("Could not receive validations: %s", err)
+	}
+
 	// g.broadcastScore()
 	//
 	// g.broadcastEnd()
@@ -130,7 +134,59 @@ func (g *Game) broadcastWords() error {
 	return g.broadcast(words)
 }
 
-func (g *Game) waitValidation() error { return nil }
+func (g *Game) waitValidation() error {
+	validationFromClients := make(chan shared.WordsValidation)
+	for i, c := range g.clients {
+		go func(i int, c client) {
+			validation, err := receiveConcrete[shared.WordsValidation](c)
+			if err != nil {
+				// FIX: ¿Cómo se puede manejar este error?
+				log.Printf("Could not receive from client: %s", err)
+				return
+			}
+
+			validationFromClients <- validation
+			return
+
+		}(i, c)
+	}
+
+	scrutiny := make(map[shared.Category]map[string]int)
+
+	timeout := time.NewTimer(stopTimeoutDuration)
+	for i := 0; i < len(g.clients); i++ {
+		select {
+		case validation := <-validationFromClients:
+			for category, words := range validation.Invalid {
+				for _, word := range words {
+					scrutiny[category][word] += 1
+				}
+			}
+		case <-timeout.C:
+			break
+		}
+	}
+
+	g.invalidWords = getInvalidWords(scrutiny, len(g.clients)/2+1)
+
+	return nil
+}
+
+func getInvalidWords(scrutiny map[shared.Category]map[string]int, necessaryVotes int) map[shared.Category]map[string]struct{} {
+	invalidWords := make(map[shared.Category]map[string]struct{})
+
+	for category, words := range scrutiny {
+		invalidWords[category] = make(map[string]struct{})
+		for word, votes := range words {
+			if votes >= necessaryVotes {
+				invalidWords[category][word] = struct{}{}
+			}
+		}
+	}
+
+	return invalidWords
+}
+
 func (g *Game) broadcastScore() error { return nil }
 func (g *Game) broadcastEnd() error   { return nil }
 

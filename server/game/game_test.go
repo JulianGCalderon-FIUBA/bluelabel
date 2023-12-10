@@ -123,6 +123,41 @@ func TestCanGetWordListByCategory(t *testing.T) {
 
 }
 
+func TestCanGetInvalidWordsFromScrutiny(t *testing.T) {
+	scrutiny := make(map[shared.Category]map[string]int)
+
+	cat1_voting := make(map[string]int)
+	cat1_voting["Perro"] = 3
+	cat1_voting["Gato"] = 1
+	cat1_voting["Vaca"] = 2
+	cat1_voting["Oveja"] = 4
+
+	cat2_voting := make(map[string]int)
+	cat2_voting["Perro"] = 3
+	cat2_voting["Gato"] = 1
+	cat2_voting["Vaca"] = 2
+
+	scrutiny[shared.Pais] = cat1_voting
+	scrutiny[shared.Animal] = cat2_voting
+
+	expected := make(map[shared.Category]map[string]struct{})
+	cat1_invalid := make(map[string]struct{})
+	cat2_invalid := make(map[string]struct{})
+
+	cat1_invalid["Perro"] = struct{}{}
+	cat1_invalid["Oveja"] = struct{}{}
+	cat2_invalid["Perro"] = struct{}{}
+
+	expected[shared.Pais] = cat1_invalid
+	expected[shared.Animal] = cat2_invalid
+
+	got := getInvalidWords(scrutiny, 3)
+
+	if !maps.EqualFunc(expected, got, maps.Equal) {
+		t.Errorf("Expected %v, but got %v", expected, got)
+	}
+}
+
 type mockRemote struct {
 	*gob.Decoder
 	*gob.Encoder
