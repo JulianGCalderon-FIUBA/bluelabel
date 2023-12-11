@@ -45,3 +45,17 @@ func roomsListStyle() lipgloss.Style {
 		Margin(mainMargin).
 		UnsetAlign()
 }
+
+func windowStyle() lipgloss.Style {
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("99")).
+		Padding(1).
+		Align(lipgloss.Center, lipgloss.Center)
+}
+
+func screenCenteringStyle(viewportHeight int, viewportWidth int) lipgloss.Style {
+	return lipgloss.NewStyle().
+		Width(viewportWidth).Height(viewportHeight).Margin(2).
+		Align(lipgloss.Center, lipgloss.Center)
+}

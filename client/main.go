@@ -1,25 +1,22 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"net"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 )
 
-func write_to_connection(connection net.Conn) {
-	input_scanner := bufio.NewScanner(os.Stdin)
-	for {
-		if input_scanner.Scan() {
-			line := input_scanner.Text()
-			io.WriteString(connection, line)
-		}
-	}
-}
+// func write_to_connection(connection net.Conn) {
+// 	input_scanner := bufio.NewScanner(os.Stdin)
+// 	for {
+// 		if input_scanner.Scan() {
+// 			line := input_scanner.Text()
+// 			io.WriteString(connection, line)
+// 		}
+// 	}
+// }
 
 func main() {
 	zone.NewGlobal()
